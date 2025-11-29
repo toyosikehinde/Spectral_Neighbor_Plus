@@ -65,3 +65,39 @@ What changes as features are added is not the algorithm but the shape of the spa
 In combination, these choices aim to produce neighbor sets that feel musically coherent: songs that sound similar, move similarly, and live in related rhythmic and, when enabled, harmonic worlds. The repository is intended as a transparent, well documented playground for exploring how each feature family reshapes this geometry and what “similarity” really means in a musical context.
 
 
+## Lyrical Semantic Features (TF–IDF)
+
+In addition to spectral audio features, Spectral Neighbor Plus includes a first layer of lyrical semantics. Each track is represented by a TF–IDF vector derived from its full lyrics. This allows the system to consider not only how a song sounds, but also what it is about.
+
+### Data
+
+Raw lyrics are stored in `data/raw/lyrics_raw.csv` with schema:
+
+- `track_id`: identifier consistent with `features_audio.csv`.
+- `lyrics`: full lyric text.
+- `source` (optional): origin of the lyrics (e.g., Genius, AZLyrics).
+
+Not all tracks are required to have lyrics; tracks without lyrics fall back to audio-only similarity.
+
+### Feature Extraction
+
+Lyrical features are built using a `TfidfVectorizer`:
+
+- Text is lowercased, punctuation is removed, and simple tags such as `[chorus]` and `[verse]` are stripped.
+- English stopwords are removed.
+- The vocabulary is pruned using:
+  - `min_df` to drop extremely rare terms,
+  - `max_df` to drop extremely frequent terms,
+  - `max_features` to cap dimensionality.
+- Both unigrams and bigrams are included (`ngram_range=(1, 2)`).
+
+The resulting TF–IDF matrix is L2-normalized and saved to:
+
+- `data/processed/lyrics_tfidf.npz` – sparse TF–IDF matrix (tracks × terms).
+- `data/processed/lyrics_tfidf_vectorizer.joblib` – fitted vectorizer (vocabulary + IDF).
+- `data/processed/lyrics_track_ids.csv` – row index to `track_id` mapping.
+
+The pipeline is implemented in `lyrics_features.py`. To build the lyrical features:
+
+```bash
+python -m src.lyrics_features
